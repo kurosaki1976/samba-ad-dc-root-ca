@@ -328,6 +328,11 @@ En este tutorial, se agregó el rol de autoridad de certificación (CA) privada 
 
 Si se desea obtener más información para familiarizarse con los fundamentos de `OpenSSL`, recomendamos consultar el tutorial [OpenSSL Essentials: Working with SSL Certificates, Private Keys and CSRs](https://www.digitalocean.com/community/tutorials/openssl-essentials-working-with-ssl-certificates-private-keys-and-csrs), que contiene mucha información adicional al respecto. También puede consultarse el resto de las [Referencias](#referencias) bases a este documento.
 
+## Comandos útiles
+
+* `easy-rsa help` (Uso y descripción general de `Easy-RSA 3`)
+* `easyrsa help options` (Descripción de las opciones globales de `Easy-RSA 3`)
+
 ## Referencias
 
 * [Certificate Authority](https://roll.urown.net/ca/)
