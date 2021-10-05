@@ -48,6 +48,7 @@ cp /opt/easy-rsa/vars.example /opt/easy-rsa/vars
 nano /opt/easy-rsa/vars
 
 (...)
+set_var EASYRSA_DN             "org"
 set_var EASYRSA_REQ_COUNTRY    "CU"
 set_var EASYRSA_REQ_PROVINCE   "Provincia"
 set_var EASYRSA_REQ_CITY       "Ciudad"
@@ -164,7 +165,7 @@ Copiar el certificado público en la ruta `/etc/pki/ca-trust/source/anchors/` y 
 
 #### El primer caso práctico tendrá lugar en el propio servidor `Samba AD DC`.
 
-- Solicitar el certificado
+- Solicitar el certificado con `OpenSSL`
 
 ```bash
 openssl genrsa -out /etc/samba/tls/dc.key
@@ -174,7 +175,7 @@ openssl req -new \
 	-out /tmp/dc.req
 ```
 
-- Importar la solicitud del certificado
+- Importar la solicitud del certificado creada con `OpenSSL`
 
 ```bash
 cd /opt/easy-rsa
@@ -196,6 +197,30 @@ Para verificar la correcta importación de la solicitud, ejecutar:
 openssl req -in /opt/easy-rsa/pki/reqs/dc.req -noout -subject
 ```
 
+> **NOTA**: Las solicitudes firmadas se almacenan en `/opt/easy-rsa/pki/issued`.
+
+Comprobar la correcta creación del certificado firmado.
+
+```bash
+openssl x509 -in /opt/easy-rsa/pki/issued/ca.crt -text -noout
+```
+
+- Solicitar el certificado con `Easy RSA`
+
+```bash
+cd /opt/easy-rsa
+easyrsa --batch --dn-mode=org --req-cn=DC.example.tld --req-c=CU --req-st="Provincia" --req-city="Ciudad" --req-org="EXAMPLE TLD" --req-email="postmaster@example.tld" --req-ou=IT gen-req www nopass
+```
+
+> **NOTA**: La creación de solicitudes con `Easy RSA` no necesitan ser importardas.
+
+Para verificar la correcta creación de la solicitud, ejecutar:
+
+```bash
+cd /opt/easy-rsa
+easyrsa show-req dc
+```
+
 - Firmar la solicitud del certificado
 
 ```bash
@@ -209,9 +234,14 @@ Se solicitará confirmar la firma de la solicitud y se obtendrá un mensaje de s
 Certificate created at: /opt/easy-rsa/pki/issued/dc.crt
 ```
 
-> **NOTA**: Las solicitudes firmadas se almacenan en `/opt/easy-rsa/pki/issued`.
+Para verificar la correcta creación del certificado firmado, ejecutar:
 
-- Verificar la firma del certificado contra la Entidad Certificadora
+```bash
+cd /opt/easy-rsa
+easyrsa show-cert dc
+```
+
+- Verificar la firma del certificado contra el certificado público de la Entidad Certificadora
 
 ```bash
 openssl verify -verbose -CApath /etc/ssl/certs/ -CAfile /etc/ssl/certs/Example-TLD_CA.pem /opt/easy-rsa/pki/issued/dc.crt
@@ -259,21 +289,38 @@ openssl req -new -subj "/C=CU/ST=Provincia/L=Ciudad/O=EXAMPLE TLD/OU=IT/CN=mail.
 scp /tmp/mail.req root@192.168.0.1:/tmp/
 ```
 
-> **NOTA**: En ambos ejemplos se definieron valores personalizados de nombres aternativos para los servidores, pero ello no es obligatorio en el proceso de solicitud de certificados, pues estos valores deberán ser definidos en el momento de firmar los certificados usando la herramienta `Easy RSA` en la `CA`; sin embargo, es obligatorio que el responsable de realizar la firma de los certificados conozca de antemano los nombres alternativos a utilizar, de lo contrario no estarán presentes en el certificado firmado.
+> **NOTA**: En ambos ejemplos se definieron valores personalizados de nombres aternativos para los servidores, pero ello no es obligatorio en el proceso de solicitud de certificados, pues estos valores pueden ser definidos en el momento de firmarlos usando la herramienta `Easy RSA` en la `CA` con la opción `--subject-alt-name`; sin embargo, es obligatorio que el responsable de realizar la firma conozca de antemano los nombres alternativos a utilizar, de lo contrario no estarán presentes en el certificado firmado. `Easy RSA` incorpora los `Subject Alternate Name` (SAN) en el proceso de importación de solicitud de firma de certificados.
 
 - Importar y firmar las solicitudes de certificados en la `CA`
 
 ```bash
 cd /opt/easy-rsa
-easyrsa import-req /tmp/ejabberd.req ejabberd
-easyrsa --subject-alt-name="DNS:jb.example.tld,DNS:conference.example.tld,DNS:echo.example.tld,\
-	DNS:pubsub.example.tld,IP:192.168.0.3" sign-req server ejabberd
-easyrsa import-req /tmp/mail.req dc mail
-easyrsa --subject-alt-name="DNS:smtp.example.tld,DNS:imap.example.tld,DNS:pop3.example.tld,\
-		DNS:webmail.example.tld,IP:192.168.0.4" sign-req server mail
+easyrsa --copy-ext import-req /tmp/ejabberd.req ejabberd
+easyrsa sign-req server ejabberd
+easyrsa --copy-ext import-req /tmp/mail.req mail
+easyrsa sign-req server mail
 ```
 
+Para verificar la correcta creación del certificado, ejecutar:
 
+```bash
+cd /opt/easy-rsa
+easyrsa show-cert dc
+```
+
+Y para verificar el correcto firmado de los certificados por la `CA`
+
+```bash
+cd /opt/easy-rsa
+openssl verify -verbose -CApath /etc/ssl/certs/ -CAfile /etc/ssl/certs/Example-TLD_CA.pem pki/issued/{ejabberd,mail}.crt
+```
+
+Se obtendrá un mensaje de salida como:
+
+```bash
+pki/issued/ejabberd.crt: OK
+pki/issued/mail.crt: OK
+```
 
 ## Conclusiones
 
