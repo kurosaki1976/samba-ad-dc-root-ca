@@ -39,10 +39,12 @@ Your newly created PKI dir is: /opt/easy-rsa/pki
 
 ### Definir variables y crear la autoridad de certificación
 
-Se debe editar el fichero de variables de Easy-RSA. Modifique solo lo mostrado en el siguiente estracto:
+Se debe editar el fichero de variables de Easy-RSA. Modifique solo lo mostrado en el siguiente extracto de texto:
 
 ```bash
 cp /opt/easy-rsa/vars.example /opt/easy-rsa/vars
+```
+```bash
 nano /opt/easy-rsa/vars
 
 (...)
@@ -64,23 +66,22 @@ cd /opt/easy-rsa/
 easyrsa build-ca
 ```
 
-Se solicitará definir una contraseña para interactuar con la entidad certificadora -firmar o revocar certificados- y confirmar el nombre común (CN) de la autoridad (CA). Si no está de acuerdo con el nombre sugerido, puede definir uno distinto, ejemplo: `Example-TLD CA`. Al concluir, obtendrá un mensaje de salida similar a:
+Se solicitará definir una contraseña para interactuar con la entidad certificadora -firmar o revocar certificados- y confirmar el nombre común (CN) de la autoridad. Si no está de acuerdo con el nombre sugerido, puede definir uno distinto, ejemplo: `Example-TLD CA`. Al concluir, obtendrá un mensaje de salida similar a:
 
 ```bash
 CA creation complete and you may now import and sign cert requests.
-Your new CA certificate file for publishing is at:
-/opt/easy-rsa/pki/ca.crt
+Your new CA certificate file for publishing is at: /opt/easy-rsa/pki/ca.crt
 ```
 
 > **NOTA**: Si no desea utilizar una contraseña para interactuar con la entidad certificadora, ejecute el comando anterior con la opción `nopass` al final.
 
 Han sido creados dos ficheros importantes, `/opt/easy-rsa/pki/ca.crt` y `/opt/easy-rsa/pki/private/ca.key`, que conforman los componentes público -el primero- y privado -el segundo- de la entidad certificadora, respectivamente.
 
-- `ca.crt` es el certificado público de la CA. Los usuarios, servidores y clientes utilizarán este certificado para verificar que forman parte de la misma red de confianza. Cada usuario y servidor que utilice la CA deberá tener una copia de este archivo. Todas las partes dependerán del certificado público para asegurarse que alguien no se haga pasar por un sistema y realice un ataque de intermediario (Man-in-the-middle attack).
+- `ca.crt` es el certificado público de la `CA`. Los usuarios, servidores y clientes utilizarán este certificado para verificar que forman parte de la misma red de confianza. Cada usuario y servidor que utilice la `CA` deberá tener una copia de este archivo. Todas las partes dependerán del certificado público para asegurarse que alguien no se haga pasar por un sistema y realice un ataque de intermediario (`Man-in-the-middle attack`).
 
-- `ca.key` es la clave privada que utiliza la CA para firmar y revocar certificados para servidores y clientes. Si un atacante obtiene acceso al certificado público y, a su vez, al archivo `ca.key`; se deberá destruir la CA. Esta es razón suficiente para mantener el archivo de clave privada en el ordenador que funciona como CA.
+- `ca.key` es la clave privada que utiliza la `CA` para firmar y revocar certificados para servidores y clientes. Si un atacante obtiene acceso al certificado público y, a su vez, al archivo `ca.key`; se deberá destruir la `CA`. Esta es razón suficiente para mantener el archivo de clave privada en el ordenador que funciona como `CA`.
 
-> **NOTA**: Un ordenador que funcione como CA, idealmente, debe estar desconectado de la red cuando no esté firmando o revocando solicitudes de certificados como una medida de seguridad adicional.
+> **NOTA**: Un ordenador que funcione como `CA`, idealmente, debe estar desconectado de la red cuando no esté firmando o revocando solicitudes de certificados como una medida de seguridad adicional.
 
 Para obtener información sobra la nueva entidad certificadora creada, se puede utilizar cualquiera de los siguientes métodos:
 
@@ -94,16 +95,16 @@ easyrsa show-ca
 - `OpenSSL`
 
 ```bash
-openssl x509 -in /etc/ssl/certs/Example-TLD_CA.pem -text -noout
+openssl x509 -in /opt/easy-rsa/pki/ca.crt -text -noout
 ```
 
-Con todo lo anteriormente explicado, la Entidad Certificadora está lista para firmar solicitudes de certificados o revocarlos.
+Con todo lo anteriormente explicado, la Entidad Certificadora está lista para firmar solicitudes de certificados o revocarlos, pero antes debe ser ditribuida a los usuarios u ordenadores que se servirán de ella.
 
 ### Distribuir el certificado público de la autoridad de certificación
 
 #### Sistema Operativo Microsoft Windows
 
-En entornos empresariales con la presencia de uno o más servidores controladores de dominio, es muy fácil distribuir el certificado público de la Entidad Certificadora a los clientes y servidores `Microsoft Windows`, utilizando las Políticas de Grupos (GPO).
+En entornos empresariales con la presencia de uno o más servidores controladores de dominio -como en el caso que nos ocupa-, es muy fácil distribuir el certificado público de la Entidad Certificadora a los clientes y servidores `Microsoft Windows`, utilizando las Políticas de Grupos (GPO).
 
 Crear Política de Grupo para distribuir el certificado público de la `CA`.
 
@@ -138,7 +139,7 @@ Vincular `GPO` a todo el dominio.
 samba-tool gpo setlink 'DC=example,DC=tld' {7A672654-FA7C-4F88-A5D0-FB5B3FBFD3A3} -U 'administrator'%'P@s$w0rd.123'
 ```
 
-Forzar la aplicación de la política.
+Finalmente, forzar la aplicación de la política.
 
 ```bash
 samba-gpupdate --force
@@ -148,7 +149,7 @@ samba-gpupdate --force
 
 - Debian y Ubuntu
 
-Copiar el certificado público en la ruta `/usr/local/share/ca-certificates/` y ejecutar el comando `update-ca-certificates`. Ejemplo:
+Copiar el certificado público en la ruta `/usr/local/share/ca-certificates/` y ejecutar el comando `update-ca-certificates`. Por ejemplo, en el servidor `ejabberd`:
 
 ```bash
 scp root@192.168.0.1:/opt/easy-rsa/pki/ca.crt /usr/local/share/ca-certificates/Example-TLD_CA.crt
@@ -157,16 +158,13 @@ update-ca-certificates
 
 - RedHat, Fedora, CentOS y Arch Linux
 
-Copiar el certificado público en la ruta `/etc/pki/ca-trust/source/anchors/` y ejecutar el comando `update-ca-trust`. Ejemplo:
+Copiar el certificado público en la ruta `/etc/pki/ca-trust/source/anchors/` y ejecutar el comando `update-ca-trust`.
 
-```bash
-scp root@192.168.0.1:/opt/easy-rsa/pki/ca.crt /etc/pki/ca-trust/source/anchors/Example-TLD_CA.crt
-update-ca-trust
-```
+### Crear solicitudes de firma de certificados y revocación de certificados para los servicios inregrados al controlador de dominio `Samba AD DC`
 
-### Crear solicitudes de firma de certificados y revocación de certificados
+#### El primer caso práctico tendrá lugar en el propio servidor `Samba AD DC`.
 
-- Solicitar certificado para `Samba AD DC`
+- Solicitar el certificado
 
 ```bash
 openssl genrsa -out /etc/samba/tls/dc.key
@@ -174,7 +172,6 @@ openssl req -new \
 	-subj "/C=CU/ST=Provincia/L=Ciudad/O=EXAMPLE LTD/OU=IT/CN=DC.example.tld/emailAddress=postmaster@example.tld/" \
 	-key /etc/samba/tls/dc.key \
 	-out /tmp/dc.req
-openssl req -in /tmp/dc.req -noout -subject
 ```
 
 - Importar la solicitud del certificado
@@ -182,12 +179,22 @@ openssl req -in /tmp/dc.req -noout -subject
 ```bash
 cd /opt/easy-rsa
 easyrsa import-req /tmp/dc.req dc
+```
 
+Se obtendrá un mensaje de salida como:
+
+```bash
 The request has been successfully imported with a short name of: dc
 You may now use this name to perform signing operations on this request.
 ```
 
-> **NOTA**: Las solicitudes se guardan en `/opt/easy-rsa/pki/reqs`.
+> **NOTA**: Las solicitudes se almacenan en `/opt/easy-rsa/pki/reqs`.
+
+Para verificar la correcta importación de la solicitud, ejecutar:
+
+```bash
+openssl req -in /opt/easy-rsa/pki/reqs/dc.req -noout -subject
+```
 
 - Firmar la solicitud del certificado
 
@@ -196,13 +203,13 @@ cd /opt/easy-rsa
 easyrsa sign-req server dc
 ```
 
-Se solicitará confirmar la firma de la solicitus y se obtendrá un mesaje de salida como:
+Se solicitará confirmar la firma de la solicitud y se obtendrá un mensaje de salida como:
 
 ```bash
 Certificate created at: /opt/easy-rsa/pki/issued/dc.crt
 ```
 
-> **NOTA**: Las solicitudes firmadas se guardan en `/opt/easy-rsa/pki/issued`.
+> **NOTA**: Las solicitudes firmadas se almacenan en `/opt/easy-rsa/pki/issued`.
 
 - Verificar la firma del certificado contra la Entidad Certificadora
 
@@ -210,7 +217,9 @@ Certificate created at: /opt/easy-rsa/pki/issued/dc.crt
 openssl verify -verbose -CApath /etc/ssl/certs/ -CAfile /etc/ssl/certs/Example-TLD_CA.pem /opt/easy-rsa/pki/issued/dc.crt
 ```
 
-Solicitud de certificado para `ejabberd`
+> **NOTA**: Se asume que el certificado público de la `CA` haya sido copiado al directorio habilitado para ello `/usr/local/share/ca-certificates/Example-TLD_CA.crt` y, ejecudata el comando `update-ca-certificates`.
+
+#### En este segundo ejemplo, se realizará la solicitud del certificado desde el servidor `ejabberd`.
 
 ```bash
 openssl genrsa -out /etc/ssl/private/ejabberd.key
