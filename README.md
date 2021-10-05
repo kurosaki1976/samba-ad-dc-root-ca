@@ -259,7 +259,7 @@ openssl req -new -subj "/C=CU/ST=Provincia/L=Ciudad/O=EXAMPLE TLD/OU=IT/CN=mail.
 scp /tmp/mail.req root@192.168.0.1:/tmp/
 ```
 
-> **NOTA**: En ambos ejemplos se definieron valores personalizados de nombres aternativos para los servidores, pero ello no es obligatorio en el proceso de solicitud de certificados, pues estos valores deberán ser definidos en el momento de firmar los certificados usando la herramienta `Easy RSA` en la `CA`, que tendrá lugar a continuación.
+> **NOTA**: En ambos ejemplos se definieron valores personalizados de nombres aternativos para los servidores, pero ello no es obligatorio en el proceso de solicitud de certificados, pues estos valores deberán ser definidos en el momento de firmar los certificados usando la herramienta `Easy RSA` en la `CA`; sin embargo, es obligatorio que el responsable de realizar la firma de los certificados conozca de antemano los nombres alternativos a utilizar, de lo contrario no estarán presentes en el certificado firmado.
 
 - Importar y firmar las solicitudes de certificados en la `CA`
 
