@@ -217,19 +217,63 @@ Certificate created at: /opt/easy-rsa/pki/issued/dc.crt
 openssl verify -verbose -CApath /etc/ssl/certs/ -CAfile /etc/ssl/certs/Example-TLD_CA.pem /opt/easy-rsa/pki/issued/dc.crt
 ```
 
-> **NOTA**: Se asume que el certificado público de la `CA` haya sido copiado al directorio habilitado para ello `/usr/local/share/ca-certificates/Example-TLD_CA.crt` y, ejecudata el comando `update-ca-certificates`.
+> **NOTA**: Se asume que el certificado público de la `CA` haya sido copiado al directorio habilitado para ello `/usr/local/share/ca-certificates/Example-TLD_CA.crt` y, ejecutado el comando `update-ca-certificates`.
 
-#### En este segundo ejemplo, se realizará la solicitud del certificado desde el servidor `ejabberd`.
+#### En los siguientes ejemplos, se realizarán solicitudes de certificados desde los servidores `jb.example.tld` y `mail.example.tld`.
+
+#### Servidor XMPP `ejabberd`
+
+- Generar solicitud de certificado
 
 ```bash
 openssl genrsa -out /etc/ssl/private/ejabberd.key
-openssl req -new -subj "/C=CU/ST=Provincia/L=Ciudad/O=EXAMPLE TLD/OU=IT/CN=example.tld/" \
+openssl req -new -subj "/C=CU/ST=Provincia/L=Ciudad/O=EXAMPLE TLD/OU=IT/CN=example.tld/emailAddress=postmaster@example.tld/" \
 	-addext "subjectAltName = DNS:jb.example.tld,DNS:conference.example.tld,DNS:echo.example.tld,\
 		DNS:pubsub.example.tld,IP:192.168.0.3" \
-	-out ejabberd.req \
-	-key ejabberd.key
-openssl req -in ejabberd.req -noout -subject
+	-out /tmp/ejabberd.req \
+	-key /etc/ssl/private/ejabberd.key
 ```
+
+- Enviar la solictud a la `CA`
+
+```bash
+scp /tmp/ejabberd.req root@192.168.0.1:/tmp/
+```
+
+#### Servidor Email `postfix+dovecot+roundcubemail`
+
+- Generar solicitud de certificado
+
+```bash
+openssl genrsa -out /etc/ssl/private/mail.key
+openssl req -new -subj "/C=CU/ST=Provincia/L=Ciudad/O=EXAMPLE TLD/OU=IT/CN=mail.example.tld/emailAddress=postmaster@example.tld/" \
+	-addext "subjectAltName = DNS:smtp.example.tld,DNS:imap.example.tld,DNS:pop3.example.tld,\
+		DNS:webmail.example.tld,IP:192.168.0.4" \
+	-out /tmp/mail.req \
+	-key /etc/ssl/private/mail.key
+```
+
+- Enviar la solictud a la `CA`
+
+```bash
+scp /tmp/mail.req root@192.168.0.1:/tmp/
+```
+
+> **NOTA**: En ambos ejemplos se definieron valores personalizados de nombres aternativos para los servidores, pero ello no es obligatorio en el proceso de solicitud de certificados, pues estos valores deberán ser definidos en el momento de firmar los certificados usando la herramienta `Easy RSA` en la `CA`, que tendrá lugar a continuación.
+
+- Importar y firmar las solicitudes de certificados en la `CA`
+
+```bash
+cd /opt/easy-rsa
+easyrsa import-req /tmp/ejabberd.req ejabberd
+easyrsa --subject-alt-name="DNS:jb.example.tld,DNS:conference.example.tld,DNS:echo.example.tld,\
+	DNS:pubsub.example.tld,IP:192.168.0.3" sign-req server ejabberd
+easyrsa import-req /tmp/mail.req dc mail
+easyrsa --subject-alt-name="DNS:smtp.example.tld,DNS:imap.example.tld,DNS:pop3.example.tld,\
+		DNS:webmail.example.tld,IP:192.168.0.4" sign-req server mail
+```
+
+
 
 ## Conclusiones
 
