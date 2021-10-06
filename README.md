@@ -136,7 +136,8 @@ Computer Configuration
 - Vincular `GPO` a todo el dominio
 
 ```bash
-samba-tool gpo setlink 'DC=example,DC=tld' {7A672654-FA7C-4F88-A5D0-FB5B3FBFD3A3} -U 'administrator'%'P@s$w0rd.123'
+samba-tool gpo setlink 'DC=example,DC=tld' {7A672654-FA7C-4F88-A5D0-FB5B3FBFD3A3} \
+	-U 'administrator'%'P@s$w0rd.123'
 ```
 
 Finalmente, forzar la aplicación de la política, en el controlador de dominio usando `samba-gpupdate --force` y en un cliente `gpupdate /force`.
@@ -246,7 +247,7 @@ openssl req -new -subj "/C=CU/ST=Provincia/L=Ciudad/O=EXAMPLE TLD/OU=IT/CN=mail.
 scp /tmp/mail.req root@192.168.0.1:/tmp/
 ```
 
-> **NOTA**: En ambos ejemplos se definieron valores personalizados de nombres aternativos para los servidores, pero ello no es obligatorio en el proceso de solicitud de certificados, pues estos valores pueden ser definidos en el momento de firmarlos usando la herramienta `Easy RSA` en la `CA` con la opción `--subject-alt-name`; sin embargo, es obligatorio que el responsable de realizar la firma conozca de antemano los nombres alternativos a utilizar, de lo contrario no estarán presentes en el certificado firmado. `Easy RSA` incorpora los `Subject Alternate Name` (SAN) en el proceso de importación de solicitud de firma de certificados.
+> **NOTA**: En ambos ejemplos se definieron valores personalizados de nombres aternativos para los servidores, pero ello no es obligatorio en el proceso de solicitud de certificados, pues estos valores pueden ser definidos en el momento de firmarlos usando la herramienta `Easy RSA` en la `CA` con la opción `--subject-alt-name`; sin embargo, es obligatorio que el responsable de realizar la firma conozca de antemano los nombres alternativos a utilizar, de lo contrario no estarán presentes en el certificado firmado.
 
 - Importar y firmar las solicitudes de certificados en la `CA`
 
@@ -256,6 +257,8 @@ easyrsa --vars=/opt/easy-rsa/vars sign-req server ejabberd
 easyrsa --vars=/opt/easy-rsa/vars --copy-ext import-req /tmp/mail.req mail
 easyrsa --vars=/opt/easy-rsa/vars sign-req server mail
 ```
+
+> **NOTA**: `Easy RSA` incorpora los `Subject Alternate Name` (SAN) generados con `OpenSSL`, definiendo la opción `--copy-ext` en el proceso de importación de solicitud de firma de certificados.
 
 Para verificar la correcta creación de los certificados, ejecutar:
 
@@ -267,7 +270,8 @@ easyrsa --vars=/opt/easy-rsa/vars show-cert mail
 Y para verificar el correcto firmado de los certificados por la `CA`
 
 ```bash
-openssl --vars=/opt/easy-rsa/vars verify -verbose -CApath /etc/ssl/certs/ -CAfile /etc/ssl/certs/Example-TLD_CA.pem pki/issued/{ejabberd,mail}.crt
+openssl --vars=/opt/easy-rsa/vars verify -verbose -CApath /etc/ssl/certs/ \
+	-CAfile /etc/ssl/certs/Example-TLD_CA.pem pki/issued/{ejabberd,mail}.crt
 ```
 
 Se obtendrá un mensaje de salida como:
