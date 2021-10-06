@@ -166,10 +166,10 @@ Copiar el certificado público en la ruta `/etc/ca-certificates/trust-source/anc
 #### El primer caso práctico tendrá lugar en el propio servidor `Samba AD DC`, utilizando exclusivamnete `Easy RSA`
 
 ```bash
-easyrsa --vars=/opt/easy-rsa/vars --batch --dn-mode=org --req-cn=DC.example.tld --req-c=CU \
+easyrsa --vars=/opt/easy-rsa/vars --batch --dn-mode="org" --req-cn="DC.example.tld" --req-c="CU" \
 	--req-st="Provincia" --req-city="Ciudad" --req-org="EXAMPLE TLD" \
-	--req-email="postmaster@example.tld" --req-ou=IT \
-	gen-req www nopass
+	--req-email="postmaster@example.tld" --req-ou="IT" \
+	gen-req dc nopass
 ```
 
 Para verificar la correcta creación de la solicitud, ejecutar:
@@ -190,10 +190,22 @@ Se solicitará confirmar la firma de la solicitud y se obtendrá un mensaje de s
 Certificate created at: /opt/easy-rsa/pki/issued/dc.crt
 ```
 
+> **NOTA**: También se puede realizar el proceso de solicitud del certificado y firmarla, en un solo paso:
+>
+> ```bash
+> easyrsa --vars=/opt/easy-rsa/vars build-server-full DC.example.ltd nopass
+> ```
+>
+> Pero en este particular todo slos ficheros resultantes llevarían el nombre `DC.example.ltd`, es decir `/opt/easy-rsa/pki/reqs/DC.example.ltd.req`, `/opt/easy-rsa/pki/private/DC.example.ltd.key` y `/opt/easy-rsa/pki/issued/DC.example.ltd.cert`.
+
 Para verificar la correcta creación del certificado firmado, ejecutar:
 
 ```bash
 easyrsa --vars=/opt/easy-rsa/vars show-cert dc
+```
+o
+```bash
+easyrsa --vars=/opt/easy-rsa/vars show-cert DC.example.ltd
 ```
 
 > **NOTA**: La solicitudes con `Easy RSA` no necesitan ser importardas. `Easy RSA` almacena todas las solicitudes en la ruta `/opt/easy-rsa/pki/reqs/` y las llaves privadas de cada solicitud generada en `/opt/easy-rsa/pki/private/` .
@@ -290,7 +302,7 @@ scp /opt/easy-rsa/pki/issued/ejabberd.crt root@jb.example.tld:/etc/ssl/certs/
 scp /opt/easy-rsa/pki/issued/ejabberd.crt root@mail.example.tld:/etc/ssl/certs/
 ```
 
-> **NOTA**: Debe tenerse en cuenta que el certificado para el sevicio `XMPP ejabberd` debe contener tanto la clave privada con la que se hizo la solicitud como el certificado firmado. Ejemplo:
+> **NOTA**: Téngase en cuenta que el certificado para el sevicio `XMPP ejabberd` debe contener tanto la clave privada con la que se hizo la solicitud como el certificado firmado. Ejemplo:
 >
 > ```bash
 > cat /etc/ssl/{certs/eabber.crt,private/ejabber.key} > /etc/ejabberd/ejabberd.pem
