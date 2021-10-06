@@ -43,7 +43,7 @@ Se debe editar el fichero de variables de `Easy-RSA`. Modifique solo lo mostrado
 
 ```bash
 cp /opt/easy-rsa/vars.example /opt/easy-rsa/vars
-```
+```$EASYRSA$EASYRSA
 ```bash
 nano /opt/easy-rsa/vars
 
@@ -196,7 +196,7 @@ Certificate created at: /opt/easy-rsa/pki/issued/dc.crt
 > easyrsa --vars=/opt/easy-rsa/vars build-server-full DC.example.ltd nopass
 > ```
 >
-> Pero en este particular todos los ficheros resultantes llevarían el nombre -utilizado en este modo como `X509 CN`-, `DC.example.ltd`; es decir `/opt/easy-rsa/pki/reqs/DC.example.ltd.req`, `/opt/easy-rsa/pki/private/DC.example.ltd.key` y `/opt/easy-rsa/pki/issued/DC.example.ltd.cert`.
+> Pero en este particular todos los ficheros resultantes llevarían el nombre -utilizado en este modo como `X509 CN`-, `DC.example.ltd`; es decir `$EASYRSA/pki/reqs/DC.example.ltd.req`, `$EASYRSA/pki/private/DC.example.ltd.key` y `$EASYRSA/pki/issued/DC.example.ltd.cert`.
 
 Para verificar la correcta creación del certificado firmado, ejecutar:
 
@@ -210,7 +210,7 @@ o, si se utilizó el método explicado en la `NOTA` anterior:
 easyrsa --vars=/opt/easy-rsa/vars show-cert DC.example.ltd
 ```
 
-> **NOTA**: La solicitudes con `Easy RSA` no necesitan ser importardas. `Easy RSA` almacena todas las solicitudes en la ruta `/opt/easy-rsa/pki/reqs/` y las llaves privadas de cada solicitud generada en `/opt/easy-rsa/pki/private/` .
+> **NOTA**: La solicitudes con `Easy RSA` no necesitan ser importardas. `Easy RSA` almacena todas las solicitudes en la ruta `$EASYRSA/pki/reqs/` y las llaves privadas de cada solicitud generada en `$EASYRSA/pki/private/` .
 
 Opcionalmente se puede verificar la firma del certificado contra el certificado público de la Entidad Certificadora utilizando `OpenSSL`:
 
@@ -319,9 +319,9 @@ scp /opt/easy-rsa/pki/issued/ejabberd.crt root@mail.example.tld:/etc/ssl/certs/
 
 ### Revocar certificados
 
-Existen escenarios en los que se deba revocar un certificado para evitar que un usuario o servidor lo use. Quizás un usuario extravió o le robaron su laptop, un servidor web quedó comprometido o un empleado abandonó la entidad, o simplemente el certificado expiró.
+Existen escenarios en los que se deba revocar un certificado para evitar que un usuario o servidor lo use. Quizás un usuario extravió o le robaron su laptop, un servidor web quedó comprometido o un empleado abandonó la entidad.
 
-> **NOTA**: En el siguiente ejemplo se revocará un certificado expirado para un servidor web `Nginx`.
+> **NOTA**: En el siguiente ejemplo se revocará el certificado de un servidor web `Nginx` comprometido.
 
 Para revocar el certificado, seguir los siguientes pasos, en la `CA`:
 
@@ -334,11 +334,7 @@ easyrsa --vars=/opt/easy-rsa/vars revoke www
 Se solicitará confirmar la acción y teclear la contraseña de gestión de la Entidada Certificadora. Además se mostrará una alerta de suma importancia relacionada con la creación de una lista de revocación de certificado (`Certificate Revocation List - CRL`). Ejemplo:
 
 ```bash
-Type the word 'yes' to continue, or any other input to abort.
-  Continue with revocation: yes
-Using configuration from /opt/easy-rsa/pki/easy-rsa-8197.WxG6CL/tmp.uxtn47
-Enter pass phrase for /opt/easy-rsa/pki/private/ca.key:
-Revoking Certificate 6FD5DF94E18B029D7C50BD860FAF6D89.
+Revoking Certificate 6FD5DF94E18B029D7C50BD860FAF6D89
 Data Base Updated
 
 IMPORTANT!!!
@@ -371,7 +367,7 @@ Para examinar y verificar el contenido de la `CRL`, ejecutar:
 openssl crl -in /opt/easy-rsa/pki/crl.pem -noout -text
 ```
 
-- Finalmente, distribuir el fichero de `CRL` al servidor y configurar las opciones pertinentes para su utilización.
+- Finalmente, distribuir la `CRL` al servidor y configurar las opciones pertinentes para su utilización.
 
 ```bash
 scp /opt/easy-rsa/pki/crl.pem root@www.example.tld:/etc/nginx/crl/
@@ -389,7 +385,7 @@ Para verificar la revocación del certificado, ejecutar:
 openssl crl -in /etc/nginx/crl/crl.pem -noout -text |grep -A 1 6FD5DF94E18B029D7C50BD860FAF6D89
 ```
 
-Obteniéndose, de ser satisfactoria la revocación, la salida:
+Obteniéndose la salida:
 
 ```bash
 Serial Number: 6FD5DF94E18B029D7C50BD860FAF6D89
