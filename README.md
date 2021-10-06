@@ -203,7 +203,7 @@ Para verificar la correcta creación del certificado firmado, ejecutar:
 ```bash
 easyrsa --vars=/opt/easy-rsa/vars show-cert dc
 ```
-o
+o, independientemente del método utilizado:
 ```bash
 easyrsa --vars=/opt/easy-rsa/vars show-cert DC.example.ltd
 ```
