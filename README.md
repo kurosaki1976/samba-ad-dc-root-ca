@@ -149,7 +149,7 @@ Finalmente, forzar la aplicación de la política, en el controlador de dominio 
 Copiar el certificado público en la ruta `/usr/local/share/ca-certificates/` y ejecutar el comando `update-ca-certificates`. Por ejemplo, desde el servidor `ejabberd`:
 
 ```bash
-scp root@192.168.0.1:/opt/easy-rsa/pki/ca.crt /usr/local/share/ca-certificates/Example-TLD_CA.crt
+scp root@dc.example.tld:/opt/easy-rsa/pki/ca.crt /usr/local/share/ca-certificates/Example-TLD_CA.crt
 update-ca-certificates
 ```
 
@@ -219,9 +219,9 @@ tls cafile = /etc/ssl/certs/Example-TLD_CA.pem
 
 #### En los siguientes ejemplos, se realizarán solicitudes de certificados desde los servidores `jb.example.tld` y `mail.example.tld`, utilizando `OpenSSL`.
 
-#### Servidor XMPP `ejabberd`
+- Generar solicitudes de certificados y enviarlas a la `CA`
 
-- Generar solicitud de certificado
+#### Servidor XMPP `ejabberd`
 
 ```bash
 openssl genrsa -out /etc/ssl/private/ejabberd.key
@@ -231,16 +231,11 @@ openssl req -new -subj "/C=CU/ST=Provincia/L=Ciudad/O=EXAMPLE TLD/OU=IT/CN=examp
 	-out /tmp/ejabberd.req \
 	-key /etc/ssl/private/ejabberd.key
 ```
-
-- Enviar la solictud a la `CA`
-
 ```bash
-scp /tmp/ejabberd.req root@192.168.0.1:/tmp/
+scp /tmp/ejabberd.req root@jb.example.tld:/tmp/
 ```
 
 #### Servidor Email `postfix+dovecot+roundcubemail`
-
-- Generar solicitud de certificado
 
 ```bash
 openssl genrsa -out /etc/ssl/private/mail.key
@@ -250,14 +245,11 @@ openssl req -new -subj "/C=CU/ST=Provincia/L=Ciudad/O=EXAMPLE TLD/OU=IT/CN=mail.
 	-out /tmp/mail.req \
 	-key /etc/ssl/private/mail.key
 ```
-
-- Enviar la solictud a la `CA`
-
 ```bash
-scp /tmp/mail.req root@192.168.0.1:/tmp/
+scp /tmp/mail.req root@mail.example.tld:/tmp/
 ```
 
-> **NOTA**: En ambos ejemplos se definieron valores personalizados de nombres aternativos para los servidores, pero ello no es obligatorio en el proceso de solicitud de certificados, pues estos valores pueden ser definidos en el momento de firmarlos usando la herramienta `Easy RSA` en la `CA` con la opción `--subject-alt-name`; sin embargo, es obligatorio que el responsable de realizar la firma conozca de antemano los nombres alternativos a utilizar, de lo contrario no estarán presentes en el certificado firmado.
+> **NOTA**: En ambos ejemplos se definieron valores personalizados de nombres aternativos para los servidores en el proceso de solicitud de certificados, pero ello no es obligatorio, estos valores pueden ser definidos en el momento de firmarlos usando la herramienta `Easy RSA` en la `CA` con la opción `--subject-alt-name`; sin embargo, es obligatorio que el responsable de realizar la firma conozca de antemano los nombres alternativos a utilizar, de lo contrario no estarán presentes en el certificado firmado.
 
 - Importar y firmar las solicitudes de certificados en la `CA`
 
@@ -277,11 +269,11 @@ easyrsa --vars=/opt/easy-rsa/vars show-cert ejabberd
 easyrsa --vars=/opt/easy-rsa/vars show-cert mail
 ```
 
-Y para verificar el correcto firmado de los certificados por la `CA`
+Y para verificar la autorización de los certificados por la `CA`
 
 ```bash
-openssl --vars=/opt/easy-rsa/vars verify -verbose -CApath /etc/ssl/certs/ \
-	-CAfile /etc/ssl/certs/Example-TLD_CA.pem pki/issued/{ejabberd,mail}.crt
+openssl verify -verbose -CApath /etc/ssl/certs/ -CAfile /etc/ssl/certs/Example-TLD_CA.pem \
+	/opt/easy-rsa/pki/issued/{ejabberd,mail}.crt
 ```
 
 Se obtendrá un mensaje de salida como:
@@ -290,6 +282,21 @@ Se obtendrá un mensaje de salida como:
 /opt/easy-rsa/pki/issued/ejabberd.crt: OK
 /opt/easy-rsa/pki/issued/mail.crt: OK
 ```
+
+Restaría distribuir los certificados autorizados a cada servidor:
+
+```bash
+scp /opt/easy-rsa/pki/issued/ejabberd.crt root@jb.example.tld:/etc/ssl/certs/
+scp /opt/easy-rsa/pki/issued/ejabberd.crt root@mail.example.tld:/etc/ssl/certs/
+```
+
+> **NOTA**: Debe tenerse en cuenta que el certificado para el sevicio `XMPP ejabberd` debe contener tanto la clave privada con la que se hizo la solicitud como el certificado firmado. Ejemplo:
+>
+> ```bash
+> cat /etc/ssl/{certs/eabber.crt,private/ejabber.key} > /etc/ejabberd/ejabberd.pem
+> chmod 0640 /etc/ejabberd/ejabberd.pem
+> chown root:ejabberd /etc/ejabberd/ejabberd.pem
+> ```
 
 ## Conclusiones
 
