@@ -196,14 +196,16 @@ Certificate created at: /opt/easy-rsa/pki/issued/dc.crt
 > easyrsa --vars=/opt/easy-rsa/vars build-server-full DC.example.ltd nopass
 > ```
 >
-> Pero en este particular todo slos ficheros resultantes llevarían el nombre `DC.example.ltd`, es decir `/opt/easy-rsa/pki/reqs/DC.example.ltd.req`, `/opt/easy-rsa/pki/private/DC.example.ltd.key` y `/opt/easy-rsa/pki/issued/DC.example.ltd.cert`.
+> Pero en este particular todos los ficheros resultantes llevarían el nombre -utilizado en este modo como `X509 CN`-, `DC.example.ltd`; es decir `/opt/easy-rsa/pki/reqs/DC.example.ltd.req`, `/opt/easy-rsa/pki/private/DC.example.ltd.key` y `/opt/easy-rsa/pki/issued/DC.example.ltd.cert`.
 
 Para verificar la correcta creación del certificado firmado, ejecutar:
 
 ```bash
 easyrsa --vars=/opt/easy-rsa/vars show-cert dc
 ```
-o, independientemente del método utilizado:
+
+o, si se utilizó el método explicado en la `NOTA` anterior:
+
 ```bash
 easyrsa --vars=/opt/easy-rsa/vars show-cert DC.example.ltd
 ```
@@ -213,11 +215,10 @@ easyrsa --vars=/opt/easy-rsa/vars show-cert DC.example.ltd
 Opcionalmente se puede verificar la firma del certificado contra el certificado público de la Entidad Certificadora utilizando `OpenSSL`:
 
 ```bash
-openssl verify -verbose -CApath /etc/ssl/certs/ -CAfile /etc/ssl/certs/Example-TLD_CA.pem \
-	/opt/easy-rsa/pki/issued/dc.crt
+openssl verify -CAfile /etc/ssl/certs/Example-TLD_CA.pem /opt/easy-rsa/pki/issued/dc.crt
 ```
 
-> **NOTA**: Lo anterior, asume que el certificado público de la `CA` ha sido copiado en el directorio `/usr/local/share/ca-certificates/Example-TLD_CA.crt` y, ejecutado el comando `update-ca-certificates`.
+> **NOTA**: Lo anterior, asume que el certificado público de la `CA` ha sido copiado en el directorio`/usr/local/share/ca-certificates/` con nombre `Example-TLD_CA.crt` y, ejecutado el comando `update-ca-certificates`.
 
 Ya se está en condiciones de implementar una de las recomendaciones finales de la [Guía para la implementación de servicios integrados a Samba como Active Directory Domain Controller (Samba AD DC) en Debian 10/11](https://github.com/kurosaki1976/samba-ad-dc-integrated-services) relacionada con la habilitación del soporte `LDAP STARTTLS` y `LDAPS` en servidores `Samba AD DC`, agregando al fichero `/etc/samba/smb.conf` en la sección `[global]`, lo siguiente:
 
@@ -227,6 +228,13 @@ tls enabled = yes
 tls keyfile = /etc/samba/tls/dc.key
 tls certfile = /etc/samba/tls/dc.crt
 tls cafile = /etc/ssl/certs/Example-TLD_CA.pem
+```
+
+Se deben copiar los ficheros de clave privada y certificado público, creados para el servidor `Samba AD DC`, en `/etc/samba/tls/` y reinciar el servicio:
+
+```bash
+cp /opt/easy-rsa/pki/{issued/dc.crt,private/dc.key} /etc/samba/tls/
+systemctl restart samba-ad-dc
 ```
 
 #### En los siguientes ejemplos, se realizarán solicitudes de certificados desde los servidores `jb.example.tld` y `mail.example.tld`, utilizando `OpenSSL`.
@@ -244,7 +252,7 @@ openssl req -new -subj "/C=CU/ST=Provincia/L=Ciudad/O=EXAMPLE TLD/OU=IT/CN=examp
 	-key /etc/ssl/private/ejabberd.key
 ```
 ```bash
-scp /tmp/ejabberd.req root@jb.example.tld:/tmp/
+scp /tmp/ejabberd.req root@dc.example.tld:/tmp/
 ```
 
 #### Servidor Email `postfix+dovecot+roundcubemail`
@@ -258,10 +266,10 @@ openssl req -new -subj "/C=CU/ST=Provincia/L=Ciudad/O=EXAMPLE TLD/OU=IT/CN=mail.
 	-key /etc/ssl/private/mail.key
 ```
 ```bash
-scp /tmp/mail.req root@mail.example.tld:/tmp/
+scp /tmp/mail.req root@dc.example.tld:/tmp/
 ```
 
-> **NOTA**: En ambos ejemplos se definieron valores personalizados de nombres aternativos para los servidores en el proceso de solicitud de certificados, pero ello no es obligatorio, estos valores pueden ser definidos en el momento de firmarlos usando la herramienta `Easy RSA` en la `CA` con la opción `--subject-alt-name`; sin embargo, es obligatorio que el responsable de realizar la firma conozca de antemano los nombres alternativos a utilizar, de lo contrario no estarán presentes en el certificado firmado.
+> **NOTA**: En ambos ejemplos se definieron -opcionalemente- valores personalizados de nombres aternativos (`Subject Alternate Name - SAN`) para los servidores en el proceso de solicitud de certificados, estos valores pueden ser definidos en el proceso de firma usando la herramienta `Easy RSA` en la `CA` con la opción `--subject-alt-name`. No obstante, es obligatorio que el responsable de realizar la firma conozca de antemano los nombres alternativos a utilizar, de lo contrario no estarán presentes en el certificado firmado.
 
 - Importar y firmar las solicitudes de certificados en la `CA`
 
@@ -272,7 +280,7 @@ easyrsa --vars=/opt/easy-rsa/vars --copy-ext import-req /tmp/mail.req mail
 easyrsa --vars=/opt/easy-rsa/vars sign-req server mail
 ```
 
-> **NOTA**: `Easy RSA` incorpora los `Subject Alternate Name` (SAN) generados con `OpenSSL`, definiendo la opción `--copy-ext` en el proceso de importación de solicitud de firma de certificados.
+> **NOTA**: `Easy RSA` incorpora los `SAN` generados con `OpenSSL`, definiendo la opción `--copy-ext` en el proceso de importación de solicitud de firma de certificados.
 
 Para verificar la correcta creación de los certificados, ejecutar:
 
@@ -284,8 +292,7 @@ easyrsa --vars=/opt/easy-rsa/vars show-cert mail
 Y para verificar la autorización de los certificados por la `CA`
 
 ```bash
-openssl verify -verbose -CApath /etc/ssl/certs/ -CAfile /etc/ssl/certs/Example-TLD_CA.pem \
-	/opt/easy-rsa/pki/issued/{ejabberd,mail}.crt
+openssl verify -CAfile /etc/ssl/certs/Example-TLD_CA.pem /opt/easy-rsa/pki/issued/{ejabberd,mail}.crt
 ```
 
 Se obtendrá un mensaje de salida como:
@@ -310,6 +317,87 @@ scp /opt/easy-rsa/pki/issued/ejabberd.crt root@mail.example.tld:/etc/ssl/certs/
 > chown root:ejabberd /etc/ejabberd/ejabberd.pem
 > ```
 
+### Revocar certificados
+
+Existen escenarios en los que se deba revocar un certificado para evitar que un usuario o servidor lo use. Quizás un usuario extravió o le robaron su laptop, un servidor web quedó comprometido o un empleado abandonó la entidad, o simplemente el certificado expiró.
+
+> **NOTA**: En el siguiente ejemplo se revocará un certificado expirado para un servidor web `Nginx`.
+
+Para revocar el certificado, seguir los siguientes pasos, en la `CA`:
+
+- Revocar el certificado.
+
+```bash
+easyrsa --vars=/opt/easy-rsa/vars revoke www
+```
+
+Se solicitará confirmar la acción y teclear la contraseña de gestión de la Entidada Certificadora. Además se mostrará una alerta de suma importancia relacionada con la creación de una lista de revocación de certificado (`Certificate Revocation List - CRL`). Ejemplo:
+
+```bash
+Type the word 'yes' to continue, or any other input to abort.
+  Continue with revocation: yes
+Using configuration from /opt/easy-rsa/pki/easy-rsa-8197.WxG6CL/tmp.uxtn47
+Enter pass phrase for /opt/easy-rsa/pki/private/ca.key:
+Revoking Certificate 6FD5DF94E18B029D7C50BD860FAF6D89.
+Data Base Updated
+
+IMPORTANT!!!
+
+Revocation was successful. You must run gen-crl and upload a CRL to your
+infrastructure in order to prevent the revoked cert from being accepted.
+```
+
+- Generar la nueva `CRL`.
+
+```bash
+easyrsa --vars=/opt/easy-rsa/vars gen-crl
+```
+
+Nuevamente, se solicitará teclear la contraseña de gestión de la `CA` y, se obtendrá el siguiente mensaje:
+
+```bash
+Note: using Easy-RSA configuration from: /opt/easy-rsa/vars
+Using SSL: openssl OpenSSL 1.1.1k  25 Mar 2021
+Using configuration from /opt/easy-rsa/pki/easy-rsa-8244.Lte0Ac/tmp.kydkLe
+Enter pass phrase for /opt/easy-rsa/pki/private/ca.key:
+
+An updated CRL has been created.
+CRL file: /opt/easy-rsa/pki/crl.pem
+```
+
+Para examinar y verificar el contenido de la `CRL`, ejecutar:
+
+```bash
+openssl crl -in /opt/easy-rsa/pki/crl.pem -noout -text
+```
+
+- Finalmente, distribuir el fichero de `CRL` al servidor y configurar las opciones pertinentes para su utilización.
+
+```bash
+scp /opt/easy-rsa/pki/crl.pem root@www.example.tld:/etc/nginx/crl/
+```
+
+Editar en fichero `/etc/nginx/nginx.conf` y añadir al final del bloque `http{}` la línea `ssl_crl /etc/nginx/crl/crl.pem;`. Comprobar errores en el fichero de configuración y, si no hay, reiniciar el servicio:
+
+```bash
+nginx -t && systemctl restart nginx && echo FINE || echo FAIL
+```
+
+Para verificar la revocación del certificado, ejecutar:
+
+```bash
+openssl crl -in /etc/nginx/crl/crl.pem -noout -text |grep -A 1 6FD5DF94E18B029D7C50BD860FAF6D89
+```
+
+Obteniéndose, de ser satisfactoria la revocación, la salida:
+
+```bash
+Serial Number: 6FD5DF94E18B029D7C50BD860FAF6D89
+    Revocation Date: Oct  6 17:58:31 2021 GMT
+```
+
+> **NOTA**: El identificador `6FD5DF94E18B029D7C50BD860FAF6D89` corresponde al número de serie del certificado revocado y se visualiza en la salida de la ejecución del comando `easyrsa --vars=/opt/easy-rsa/vars revoke www` en la `CA`, utilizado en el paso de revocación.
+
 ## Conclusiones
 
 En este tutorial, se agregó el rol de autoridad de certificación (CA) privada utilizando el paquete `Easy-RSA` a un servidor `Samba AD DC` corriendo sistema operativo `Debian GNU\Linux v10/11`. Se explicó cómo funciona el modelo de confianza entre las partes que dependen de la `CA`. Así como, se crearon y firmaron las solicitudes de firma de certificado (CSR) para algunos de los servicios integrados en la [Guía para la implementación de servicios integrados a Samba como Active Directory Domain Controller (Samba AD DC) en Debian 10/11](https://github.com/kurosaki1976/samba-ad-dc-integrated-services) y, posteriormente se procedió a revocar un certificado. Finalmente, se mostró cómo generar y distribuir una lista de revocación de certificados (CRL) para cualquier sistema dependiente de la `CA` garantizando que los usuarios o servidores que no deben acceder a los servicios no puedan hacerlo.
@@ -331,3 +419,4 @@ Si se desea obtener más información para familiarizarse con los fundamentos de
 * [easy-rsa Setting up your own PKI - the simple way](https://vxsan.com/setting-up-your-own-pki-the-simple-way/)
 * [Easy-RSA](https://wiki.archlinux.org/index.php/Easy-RSA)
 * [Certificates](https://kubernetes.io/docs/tasks/administer-cluster/certificates/)
+* [NGINX Client Certificate with Indirect CRL](https://serverfault.com/questions/1054586/nginx-client-certificate-with-indirect-crl)
