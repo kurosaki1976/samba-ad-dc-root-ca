@@ -207,6 +207,16 @@ openssl verify -verbose -CApath /etc/ssl/certs/ -CAfile /etc/ssl/certs/Example-T
 
 > **NOTA**: Lo anterior, asume que el certificado público de la `CA` ha sido copiado en el directorio `/usr/local/share/ca-certificates/Example-TLD_CA.crt` y, ejecutado el comando `update-ca-certificates`.
 
+Ya se está en condiciones de implementar una de las recomendaciones finales de la [Guía para la implementación de servicios integrados a Samba como Active Directory Domain Controller (Samba AD DC) en Debian 10/11](https://github.com/kurosaki1976/samba-ad-dc-integrated-services) relacionada con la habilitación del soporte `LDAP STARTTLS` y `LDAPS` en servidores `Samba AD DC`, agregando al fichero `/etc/samba/smb.conf` en la sección `[global]`, lo siguiente:
+
+```bash
+ldap ssl = start tls
+tls enabled = yes
+tls keyfile = /etc/samba/tls/dc.key
+tls certfile = /etc/samba/tls/dc.crt
+tls cafile = /etc/ssl/certs/Example-TLD_CA.pem
+```
+
 #### En los siguientes ejemplos, se realizarán solicitudes de certificados desde los servidores `jb.example.tld` y `mail.example.tld`, utilizando `OpenSSL`.
 
 #### Servidor XMPP `ejabberd`
