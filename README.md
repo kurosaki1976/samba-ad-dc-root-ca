@@ -398,6 +398,8 @@ Serial Number: 6FD5DF94E18B029D7C50BD860FAF6D89
 
 En este tutorial, se agregó el rol de autoridad de certificación (CA) privada utilizando el paquete `Easy-RSA` a un servidor `Samba AD DC` corriendo sistema operativo `Debian GNU\Linux v10/11`. Se explicó cómo funciona el modelo de confianza entre las partes que dependen de la `CA`. Así como, se crearon y firmaron las solicitudes de firma de certificado (CSR) para algunos de los servicios integrados en la [Guía para la implementación de servicios integrados a Samba como Active Directory Domain Controller (Samba AD DC) en Debian 10/11](https://github.com/kurosaki1976/samba-ad-dc-integrated-services) y, finalmente se procedió a revocar un certificado, mostrándose cómo generar y distribuir una lista de revocación de certificados (CRL) para cualquier sistema dependiente de la `CA` garantizando que los usuarios o servidores que no deben acceder a los servicios, no puedan hacerlo.
 
+La renovación de certificados expirados no es objeto de esta guía porque es un proceso en extremo fácil e intuitivo, basta con ejecutar `easyrsa renew`. Pero es necesario aclarar que la renovación en `Easy RSA` sólo está disponible para certificados firmados con un período de validez inferior a los 30 días.
+
 Si se desea obtener más información para familiarizarse con los fundamentos de `OpenSSL`, recomendamos consultar el tutorial [OpenSSL Essentials: Working with SSL Certificates, Private Keys and CSRs](https://www.digitalocean.com/community/tutorials/openssl-essentials-working-with-ssl-certificates-private-keys-and-csrs), que contiene mucha información adicional al respecto. También puede consultarse el resto de las [Referencias](#referencias) bases a este documento.
 
 ## Comandos útiles
