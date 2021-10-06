@@ -195,10 +195,10 @@ Certificate created at: /opt/easy-rsa/pki/issued/dc.crt
 > **NOTA**: También se puede realizar el proceso de solicitud del certificado y firmarla, en un solo paso:
 >
 > ```bash
-> easyrsa --vars=/opt/easy-rsa/vars build-server-full DC.example.ltd nopass
+> easyrsa --vars=/opt/easy-rsa/vars build-server-full DC.example.tld nopass
 > ```
 >
-> Pero en este particular todos los ficheros resultantes llevarían el nombre -utilizado en este modo como `X509 CN`-, `DC.example.ltd`; es decir `$EASYRSA/pki/reqs/DC.example.ltd.req`, `$EASYRSA/pki/private/DC.example.ltd.key` y `$EASYRSA/pki/issued/DC.example.ltd.cert`.
+> Pero en este particular todos los ficheros resultantes llevarían el nombre -utilizado en este modo como `X509 CN`-, `DC.example.tld`; es decir `/opt/easy-rsa/pki/reqs/DC.example.tld.req`, `/opt/easy-rsa/pki/private/DC.example.tld.key` y `/opt/easy-rsa/pki/issued/DC.example.tld.cert`.
 
 Para verificar la correcta creación del certificado firmado, ejecutar:
 
@@ -209,7 +209,7 @@ easyrsa --vars=/opt/easy-rsa/vars show-cert dc
 o, si se utilizó el método explicado en la `NOTA` anterior:
 
 ```bash
-easyrsa --vars=/opt/easy-rsa/vars show-cert DC.example.ltd
+easyrsa --vars=/opt/easy-rsa/vars show-cert DC.example.tld
 ```
 
 > **NOTA**: La solicitudes con `Easy RSA` no necesitan ser importardas. `Easy RSA` almacena todas las solicitudes en la ruta `$EASYRSA/pki/reqs/` y las llaves privadas de cada solicitud generada en `$EASYRSA/pki/private/` .
@@ -232,11 +232,13 @@ tls certfile = /etc/samba/tls/dc.crt
 tls cafile = /etc/ssl/certs/Example-TLD_CA.pem
 ```
 
-Se deben copiar los ficheros de clave privada y certificado público, creados para el servidor `Samba AD DC`, en `/etc/samba/tls/` y reinciar el servicio:
+Se deben copiar los ficheros de clave privada y certificado público, creados para el servidor `Samba AD DC`, en `/etc/samba/tls/`, establecer permisos y reinciar servicios asociados:
 
 ```bash
 cp /opt/easy-rsa/pki/{issued/dc.crt,private/dc.key} /etc/samba/tls/
-systemctl restart samba-ad-dc
+chmod 0644 /etc/samba/tls/dc.crt
+chmod 0600 /etc/samba/tls/dc.key
+systemctl restart samba-ad-dc bind9
 ```
 
 #### En los siguientes ejemplos, se realizarán solicitudes de certificados desde los servidores `jb.example.tld` y `mail.example.tld`, utilizando `OpenSSL`.
