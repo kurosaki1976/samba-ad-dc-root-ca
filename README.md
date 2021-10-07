@@ -6,7 +6,7 @@
 
 ## Introducción
 
-En esta guía, se añadirá el rol de Entidad Certificadora al servidor `Samba AD DC` configurado en el documento [Guía para la implementación de servicios integrados a Samba como Active Directory Domain Controller (Samba AD DC) en Debian 10/11](https://github.com/kurosaki1976/samba-ad-dc-integrated-services), utilizando la herramienta [Easy-RSA 3](https://easy-rsa.readthedocs.io/en/latest/).
+En esta guía, se añadirá el rol de Entidad Certificadora al servidor `Samba AD DC` configurado en el documento [Guía para la implementación de servicios integrados a Samba como Active Directory Domain Controller (Samba AD DC) en Debian 10/11](https://github.com/kurosaki1976/samba-ad-dc-integrated-services), utilizando la herramienta [Easy-RSA 3](https://easy-rsa.readthedocs.io/en/latest/), permitiendo firmar solicitudes de certificados a los servicios integrados.
 
 ¿Qué es Easy-RSA?
 
@@ -30,16 +30,16 @@ cd /opt/easy-rsa/
 easyrsa init-pki
 ```
 
-Con la ejecución de este último comando, se debe obtener el siguiente mensaje:
+Con la ejecución del último comando, se debe obtener el siguiente mensaje:
 
 ```bash
 init-pki complete; you may now create a CA or requests.
 Your newly created PKI dir is: /opt/easy-rsa/pki
 ```
 
-### Definir variables y crear la autoridad de certificación
+### Definir variables y crear la autoridad de certificación (CA)
 
-Se debe editar el fichero de variables de `Easy-RSA`. Modifique solo lo mostrado en el siguiente extracto de texto:
+Se debe editar el fichero de variables de `Easy-RSA` y, adaptar lo mostrado en el siguiente extracto de texto:
 
 ```bash
 cp /opt/easy-rsa/vars.example /opt/easy-rsa/vars
@@ -62,31 +62,35 @@ set_var EASYRSA_ALGO           rsa
 set_var EASYRSA_CA_EXPIRE      3650
 set_var EASYRSA_CERT_EXPIRE    90
 set_var EASYRSA_CERT_RENEW     30
+set_var EASYRSA_REQ_CN         "Example-TLD CA"
 set_var EASYRSA_DIGEST         "sha512"
 (...)
 ```
+
+Definir la ruta de puntos de distribución de listas de revocación de certificados (CDP), añadiendo al final del archivo `/opt/easy-rsa/x509-types/COMMON` las líneas `authorityInfoAccess = caIssuers;URI:http://example.tld/pki/Example-TLD_CA.crt` y `crlDistributionPoints = URI:http://example.tld/pki/crl.pem`, luego crear pkila `CA`, ejecutando:
+
 ```bash
 easyrsa --vars=/opt/easy-rsa/vars build-ca
 ```
 
-Se solicitará definir una contraseña para interactuar con la entidad certificadora -firmar o revocar certificados- y confirmar el nombre común (CN) de la autoridad. Si no está de acuerdo con el nombre sugerido, puede definir uno distinto, ejemplo: `Example-TLD CA`. Al concluir, obtendrá un mensaje de salida similar a:
+Se solicitará definir una contraseña para gestionar con la `CA` -firmar, renovar o revocar certificados- y confirmar el nombre común (CN) de la autoridad. Si no está de acuerdo con el nombre sugerido, puede definir uno distinto, ejemplo: `Example-TLD CA`. Al concluir, obtendrá un mensaje de salida similar a:
 
 ```bash
 CA creation complete and you may now import and sign cert requests.
 Your new CA certificate file for publishing is at: /opt/easy-rsa/pki/ca.crt
 ```
 
-> **NOTA**: Si no desea utilizar una contraseña para interactuar con la entidad certificadora, ejecute el comando anterior con la opción `nopass` al final.
+> **NOTA**: Si no desea utilizar una contraseña para gestionar la `CA`, ejecute el comando anterior con la opción `nopass` al final.
 
-Con la creación de la `CA`, fueron creados dos ficheros importantes, `/opt/easy-rsa/pki/ca.crt` y `/opt/easy-rsa/pki/private/ca.key`, que conforman los componentes público -el primero- y privado -el segundo- de la entidad certificadora, respectivamente.
+Con la creación de la `CA`, se originaron dos ficheros importantes: `/opt/easy-rsa/pki/ca.crt` y `/opt/easy-rsa/pki/private/ca.key`, que conforman los componentes público -el primero- y privado -el segundo- de la entidad certificadora, respectivamente.
 
-- `ca.crt` es el certificado público de la `CA`. Los usuarios, servidores y clientes utilizarán este certificado para verificar que forman parte de la misma red de confianza. Cada usuario y servidor que utilice la `CA` deberá tener una copia de este archivo. Todas las partes dependerán del certificado público para asegurarse que alguien no se haga pasar por un sistema y realice un ataque de intermediario (`Man-in-the-middle attack`).
+- `ca.crt` es el certificado público de la `CA`. Los usuarios, servidores y clientes utilizarán este certificado para verificar que forman parte de la misma red de confianza. Cada usuario y servidor -dentro o fuera del dominio-, que utilice la `CA`, deberá tener una copia de este archivo. Todas las partes dependerán del certificado público para asegurarse que alguien no se haga pasar por un sistema y realice un ataque de intermediario (`Man-in-the-middle attack`).
 
-- `ca.key` es la clave privada que utiliza la `CA` para firmar y revocar certificados para servidores y clientes. Si un atacante obtiene acceso al certificado público y, a su vez, al archivo `ca.key`; se deberá destruir la `CA`. Esta es razón suficiente para mantener el archivo de clave privada en el ordenador que funciona como `CA`.
+- `ca.key` es la clave privada que utiliza la `CA` para firmar, renovar y revocar certificados para servidores y clientes. Si un atacante obtiene acceso al certificado público y, a su vez, al archivo `ca.key`; se deberá destruir la `CA`. Esta es razón suficiente para mantener el archivo de clave privada en el ordenador que funciona como `CA`.
 
-> **NOTA**: Un ordenador que funcione como `CA`, idealmente, debe estar desconectado de la red cuando no esté firmando o revocando solicitudes de certificados como una medida de seguridad adicional.
+> **NOTA**: Un ordenador que funcione como `CA`, idealmente, debe estar desconectado de la red cuando no esté firmando, renovando o revocando solicitudes de certificados como una medida de seguridad adicional.
 
-Para obtener información sobra la nueva entidad certificadora creada, se puede utilizar cualquiera de los siguientes métodos:
+Para obtener información sobra la nueva `CA` creada, se puede utilizar cualquiera de los siguientes métodos:
 
 - `Easy RSA` (recomendado)
 
@@ -133,16 +137,16 @@ Computer Configuration
           Certificates
 ```
 >
-> Para ello, en el árbol de la consola, abrir la ruta `Computer Configuration\Policies\Windows Settings\Security Settings\Public Key Policies`, clic derecho en `Trusted Root Certification Authorities` e importar el certificado público de la `CA`.
+> Seguir en el árbol de la consola, la ruta `Computer Configuration\Policies\Windows Settings\Security Settings\Public Key Policies`, clic derecho en `Trusted Root Certification Authorities` e importar el certificado público de la `CA`.
 
-- Vincular `GPO` a todo el dominio
+- Vincular la nueva `GPO` a todo el dominio
 
 ```bash
 samba-tool gpo setlink 'DC=example,DC=tld' {7A672654-FA7C-4F88-A5D0-FB5B3FBFD3A3} \
 	-U 'administrator'%'P@s$w0rd.123'
 ```
 
-Finalmente, forzar la aplicación de la política, en el controlador de dominio usando `samba-gpupdate --force` y en un cliente `gpupdate /force`.
+Finalmente, forzar la aplicación de la política, en el controlador de dominio usando `samba-gpupdate --force` y en un cliente: `gpupdate /force`.
 
 #### Sistema Operativo GNU/Linux
 
@@ -154,6 +158,8 @@ Copiar el certificado público en la ruta `/usr/local/share/ca-certificates/` y 
 scp root@dc.example.tld:/opt/easy-rsa/pki/ca.crt /usr/local/share/ca-certificates/Example-TLD_CA.crt
 update-ca-certificates
 ```
+
+> **NOTA**: Se recomienda realizar la distribución del certificado público de la `CA`, primeramente, en los controladores de dominio `Samba AD DC`.
 
 - RedHat y sus derivados (Fedora, CentOS, etc.)
 
@@ -192,7 +198,7 @@ Se solicitará confirmar la firma de la solicitud y se obtendrá un mensaje de s
 Certificate created at: /opt/easy-rsa/pki/issued/dc.crt
 ```
 
-> **NOTA**: También se puede realizar el proceso de solicitud del certificado y firmarla, en un solo paso:
+> **NOTA**: También se puede realizar la solicitud del certificado y firmarla, en un solo paso:
 >
 > ```bash
 > easyrsa --vars=/opt/easy-rsa/vars build-server-full DC.example.tld nopass
@@ -273,7 +279,7 @@ openssl req -new -subj "/C=CU/ST=Provincia/L=Ciudad/O=EXAMPLE TLD/OU=IT/CN=mail.
 scp /tmp/mail.req root@dc.example.tld:/tmp/
 ```
 
-> **NOTA**: En ambos ejemplos se definieron -opcionalemente- valores personalizados de nombres aternativos (`Subject Alternate Name - SAN`) para los servidores en el proceso de solicitud de certificados, estos valores pueden ser definidos en el proceso de firma usando la herramienta `Easy RSA` en la `CA` con la opción `--subject-alt-name`. No obstante, es obligatorio que el responsable de realizar la firma conozca de antemano los nombres alternativos a utilizar, de lo contrario no estarán presentes en el certificado firmado.
+> **NOTA**: En ambos ejemplos se definieron -opcionalemente- valores personalizados de nombres aternativos (`Subject Alternate Name - SAN`) para los servidores en el proceso de solicitud de certificados, estos valores pueden ser definidos en el momento de firma usando la herramienta `Easy RSA` en la `CA` con la opción `--subject-alt-name`. No obstante, es obligatorio que el responsable de realizar la firma conozca de antemano los nombres alternativos a utilizar, de lo contrario no estarán presentes en el certificado firmado.
 
 - Importar y firmar las solicitudes de certificados en la `CA`
 
@@ -284,7 +290,7 @@ easyrsa --vars=/opt/easy-rsa/vars --copy-ext import-req /tmp/mail.req mail
 easyrsa --vars=/opt/easy-rsa/vars sign-req server mail
 ```
 
-> **NOTA**: `Easy RSA` incorpora los `SAN` generados con `OpenSSL`, definiendo la opción `--copy-ext` en el proceso de importación de solicitud de firma de certificados.
+> **NOTA**: `Easy RSA` incorpora los `SAN` generados con `OpenSSL`, definiendo la opción `--copy-ext` al importar la solicitud de firma de certificados.
 
 Para verificar la correcta creación de los certificados, ejecutar:
 
@@ -293,7 +299,7 @@ easyrsa --vars=/opt/easy-rsa/vars show-cert ejabberd
 easyrsa --vars=/opt/easy-rsa/vars show-cert mail
 ```
 
-Y para verificar la autorización de los certificados por la `CA`
+Para verificar la autorización de los certificados por la `CA`
 
 ```bash
 openssl verify -CAfile /etc/ssl/certs/Example-TLD_CA.pem /opt/easy-rsa/pki/issued/{ejabberd,mail}.crt
@@ -313,17 +319,17 @@ scp /opt/easy-rsa/pki/issued/ejabberd.crt root@jb.example.tld:/etc/ssl/certs/
 scp /opt/easy-rsa/pki/issued/ejabberd.crt root@mail.example.tld:/etc/ssl/certs/
 ```
 
-> **NOTA**: Téngase en cuenta que el certificado para el sevicio `XMPP ejabberd` debe contener tanto la clave privada con la que se hizo la solicitud como el certificado firmado. Ejemplo:
+> **NOTA**: Téngase en cuenta que el certificado para el sevicio `XMPP ejabberd` debe contener tanto la clave privada con la que se hizo la solicitud, como el certificado firmado. Ejemplo:
 >
 > ```bash
-> cat /etc/ssl/{certs/eabber.crt,private/ejabber.key} > /etc/ejabberd/ejabberd.pem
+> cat /etc/ssl/{certs/ejabberd.crt,private/ejabberd.key} > /etc/ejabberd/ejabberd.pem
 > chmod 0640 /etc/ejabberd/ejabberd.pem
 > chown root:ejabberd /etc/ejabberd/ejabberd.pem
 > ```
 
 ### Revocar certificados
 
-Existen escenarios en los que se deba revocar un certificado para evitar que un usuario o servidor lo use. Quizás un usuario extravió o le robaron su laptop, un servidor web quedó comprometido o un empleado abandonó la entidad.
+Existen escenarios en los que se deba revocar un certificado para evitar que un usuario o servidor lo use. Quizás un usuario extravió o le robaron su laptop, un empleado abandonó la entidad o un servidor web quedó comprometido.
 
 > **NOTA**: En el siguiente ejemplo se revocará el certificado de un servidor web `Nginx` comprometido.
 
@@ -335,10 +341,11 @@ Para revocar el certificado, seguir los siguientes pasos, en la `CA`:
 easyrsa --vars=/opt/easy-rsa/vars revoke www
 ```
 
-Se solicitará confirmar la acción y teclear la contraseña de gestión de la Entidada Certificadora. Además se mostrará una alerta de suma importancia relacionada con la creación de una lista de revocación de certificado (`Certificate Revocation List - CRL`). Ejemplo:
+Se solicitará confirmar la acción y teclear la contraseña de gestión de la `CA`. Además se mostrará una alerta relacionada con la creación de una lista de revocación de certificado (`Certificate Revocation List - CRL`). Ejemplo:
 
 ```bash
-Revoking Certificate 6FD5DF94E18B029D7C50BD860FAF6D89
+(...)
+Revoking Certificate 6FD5DF94E18B029D7C50BD860FAF6D89.
 Data Base Updated
 
 IMPORTANT!!!
@@ -374,10 +381,10 @@ openssl crl -in /opt/easy-rsa/pki/crl.pem -noout -text
 - Finalmente, distribuir la `CRL` al servidor y configurar las opciones pertinentes para su utilización.
 
 ```bash
-scp /opt/easy-rsa/pki/crl.pem root@www.example.tld:/etc/nginx/crl/
+scp /opt/easy-rsa/pki/crl.pem root@www.example.tld:/var/www/html/pki/
 ```
 
-Editar en fichero `/etc/nginx/nginx.conf` y añadir al final del bloque `http{}` la línea `ssl_crl /etc/nginx/crl/crl.pem;`. Comprobar errores en el fichero de configuración y, si no hay, reiniciar el servicio:
+Editar en fichero `/etc/nginx/nginx.conf` y añadir al final del bloque `http{}` la línea `ssl_crl /var/www/html/pki/crl.pem;`. Comprobar errores en el fichero de configuración y, si no hay, reiniciar el servicio:
 
 ```bash
 nginx -t && systemctl restart nginx && echo FINE || echo FAIL
@@ -386,7 +393,7 @@ nginx -t && systemctl restart nginx && echo FINE || echo FAIL
 Para verificar la revocación del certificado, ejecutar:
 
 ```bash
-openssl crl -in /etc/nginx/crl/crl.pem -noout -text |grep -A 1 6FD5DF94E18B029D7C50BD860FAF6D89
+openssl crl -in /var/www/html/pki/crl.pem -noout -text | grep -A 1 6FD5DF94E18B029D7C50BD860FAF6D89
 ```
 
 Obteniéndose la salida:
@@ -402,9 +409,9 @@ Serial Number: 6FD5DF94E18B029D7C50BD860FAF6D89
 
 En este tutorial, se agregó el rol de autoridad de certificación (CA) privada utilizando el paquete `Easy-RSA` a un servidor `Samba AD DC` corriendo sistema operativo `Debian GNU\Linux v10/11`. Se explicó cómo funciona el modelo de confianza entre las partes que dependen de la `CA`. Así como, se crearon y firmaron las solicitudes de firma de certificado (CSR) para algunos de los servicios integrados en la [Guía para la implementación de servicios integrados a Samba como Active Directory Domain Controller (Samba AD DC) en Debian 10/11](https://github.com/kurosaki1976/samba-ad-dc-integrated-services) y, finalmente se procedió a revocar un certificado, mostrándose cómo generar y distribuir una lista de revocación de certificados (CRL) para cualquier sistema dependiente de la `CA` garantizando que los usuarios o servidores que no deben acceder a los servicios, no puedan hacerlo.
 
-La renovación de certificados expirados no es objeto de esta guía porque es un proceso en extremo fácil e intuitivo, basta con ejecutar `easyrsa renew`. Pero es necesario aclarar que la renovación en `Easy RSA` por defecto está disponible para certificados firmados con un período de validez inferior a los 30 días, ese comportamiento puede ser modificado en el fichero de variables.
+La renovación de certificados expirados no es objeto de esta guía, porque es un proceso en extremo fácil e intuitivo, basta con ejecutar `easyrsa help renew` para conocer cómo hacerlo. Sin embargo, es necesario aclarar que la renovación en `Easy RSA` por defecto está disponible para certificados firmados con un período de validez inferior a los 30 días, comportamiento que puede ser modificado en el fichero de variables.
 
-Si se desea obtener más información para familiarizarse con los fundamentos de `OpenSSL`, recomendamos consultar el tutorial [OpenSSL Essentials: Working with SSL Certificates, Private Keys and CSRs](https://www.digitalocean.com/community/tutorials/openssl-essentials-working-with-ssl-certificates-private-keys-and-csrs), que contiene mucha información adicional al respecto. También puede consultarse el resto de las [Referencias](#referencias) bases a este documento.
+Si se desea obtener más información para familiarizarse con los fundamentos de `OpenSSL`, recomendamos consultar el tutorial [OpenSSL Essentials: Working with SSL Certificates, Private Keys and CSRs](https://www.digitalocean.com/community/tutorials/openssl-essentials-working-with-ssl-certificates-private-keys-and-csrs), que contiene mucha información adicional al respecto. También puede consultarse el resto de las [Referencias](#referencias) disponibles en este documento.
 
 ## Comandos útiles
 
@@ -422,3 +429,4 @@ Si se desea obtener más información para familiarizarse con los fundamentos de
 * [Easy-RSA](https://wiki.archlinux.org/index.php/Easy-RSA)
 * [Certificates](https://kubernetes.io/docs/tasks/administer-cluster/certificates/)
 * [NGINX Client Certificate with Indirect CRL](https://serverfault.com/questions/1054586/nginx-client-certificate-with-indirect-crl)
+* [Easy-RSA as the basis for a PKI](https://lspeed.org/2020/04/easy-rsa-as-the-basis-for-a-pki/)
