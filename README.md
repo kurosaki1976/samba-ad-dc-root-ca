@@ -6,7 +6,7 @@
 
 ## Introducción
 
-En esta guía, se añadirá el rol de Entidad Certificadora al servidor `Samba AD DC` configurado en el documento [Guía para la implementación de servicios integrados a Samba como Active Directory Domain Controller (Samba AD DC) en Debian 10/11](https://github.com/kurosaki1976/samba-ad-dc-integrated-services), utilizando la herramienta [Easy-RSA 3](https://easy-rsa.readthedocs.io/en/latest/), permitiendo firmar solicitudes de certificados a los servicios integrados.
+En esta guía, se añadirá el rol de Entidad Certificadora al servidor `Samba AD DC` configurado en el documento [Guía para la implementación de servicios integrados a Samba como Active Directory Domain Controller (Samba AD DC) en Debian 10/11](https://github.com/kurosaki1976/samba-ad-dc-integrated-services), utilizando la herramienta [Easy-RSA 3](https://easy-rsa.readthedocs.io/en/latest/), permitiendo firmar solicitudes de certificados para los servicios integrados.
 
 ¿Qué es Easy-RSA?
 
@@ -67,7 +67,7 @@ set_var EASYRSA_DIGEST         "sha512"
 (...)
 ```
 
-Definir la ruta de puntos de distribución de listas de revocación de certificados (CDP), añadiendo al final del archivo `/opt/easy-rsa/x509-types/COMMON` las líneas `authorityInfoAccess = caIssuers;URI:http://example.tld/pki/Example-TLD_CA.crt` y `crlDistributionPoints = URI:http://example.tld/pki/crl.pem`, luego crear pkila `CA`, ejecutando:
+Definir la ruta de puntos de distribución de listas de revocación de certificados (CDP), añadiendo al final del archivo `/opt/easy-rsa/x509-types/COMMON` las líneas `authorityInfoAccess = caIssuers;URI:http://example.tld/pki/Example-TLD_CA.crt` y `crlDistributionPoints = URI:http://example.tld/pki/crl.pem`, luego crear la `CA`, ejecutando:
 
 ```bash
 easyrsa --vars=/opt/easy-rsa/vars build-ca
