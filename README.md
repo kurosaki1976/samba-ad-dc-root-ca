@@ -6,7 +6,7 @@
 
 ## Introducción
 
-En esta guía, se añadirá el rol de Entidad Certificadora al servidor `Samba AD DC` configurado en el documento [Guía para la implementación de servicios integrados a Samba como Active Directory Domain Controller (Samba AD DC) en Debian 10/11](https://github.com/kurosaki1976/samba-ad-dc-integrated-services), utilizando la herramienta [Easy-RSA 3](https://easy-rsa.readthedocs.io/en/latest/), permitiendo firmar solicitudes de certificados para los servicios integrados.
+En esta guía, se añadirá el rol de Entidad Certificadora al servidor `Samba AD DC` configurado en el documento [Guía para la implementación de servicios integrados a Samba como Active Directory Domain Controller (Samba AD DC) en Debian 10/11](https://github.com/kurosaki1976/samba-ad-dc-integrated-services), utilizando la herramienta [Easy-RSA 3](https://easy-rsa.readthedocs.io/en/latest/), permitiendo firmar solicitudes de certificados a los servicios integrados.
 
 ¿Qué es Easy-RSA?
 
@@ -67,7 +67,7 @@ set_var EASYRSA_DIGEST         "sha512"
 (...)
 ```
 
-Definir la ruta de puntos de distribución de listas de revocación de certificados (CDP), añadiendo al final del archivo `/opt/easy-rsa/x509-types/COMMON` las líneas `authorityInfoAccess = caIssuers;URI:http://example.tld/pki/Example-TLD_CA.crt` y `crlDistributionPoints = URI:http://example.tld/pki/crl.pem`, luego crear la `CA`, ejecutando:
+Definir la ruta de acceso a la información de la entidad (AIA) y al punto de distribución de la lista de revocación de certificados (CDP), añadiendo al final del archivo `/opt/easy-rsa/x509-types/COMMON` las líneas `authorityInfoAccess = caIssuers;URI:http://example.tld/pki/Example-TLD_CA.crt` y `crlDistributionPoints = URI:http://example.tld/pki/crl.pem`, luego crear pkila `CA`, ejecutando:
 
 ```bash
 easyrsa --vars=/opt/easy-rsa/vars build-ca
@@ -127,15 +127,15 @@ GPO 'CA Public Certificate Distribution Policy' created as {7A672654-FA7C-4F88-A
 > **NOTA**: La modificación de los parámetros de la `GPO` puede realizarse mediante la aplicación gráfica `Group Policy Management Editor` disponible en el paquete de herramientas administrativas `RSAT`.
 >
 > La `GPO` debe configurarse con los siguientes parámetros:
-
-```cmd
-Computer Configuration
-  Policies
-    Windows Settings
-      Security Settings
-        Public Key Policies/Trusted Root Certification Authorities
-          Certificates
-```
+>
+>```cmd
+>Computer Configuration
+>  Policies
+>    Windows Settings
+>      Security Settings
+>        Public Key Policies/Trusted Root Certification Authorities
+>          Certificates
+>```
 >
 > Seguir en el árbol de la consola, la ruta `Computer Configuration\Policies\Windows Settings\Security Settings\Public Key Policies`, clic derecho en `Trusted Root Certification Authorities` e importar el certificado público de la `CA`.
 
@@ -404,6 +404,19 @@ Serial Number: 6FD5DF94E18B029D7C50BD860FAF6D89
 ```
 
 > **NOTA**: El identificador `6FD5DF94E18B029D7C50BD860FAF6D89` corresponde al número de serie del certificado revocado y se visualiza en la salida de la ejecución del comando `easyrsa revoke`, utilizado en el paso de revocación en la `CA`.
+
+> **NOTA**: Se puede crear una política de grupos para distribuir los certificados en los que yo no se confía. La `GPO` debe configurarse con los siguientes parámetros:
+>
+>```cmd
+>Computer Configuration
+>  Policies
+>    Windows Settings
+>      Security Settings
+>        Public Key Policies/Untrusted Certificates
+>          Certificates
+>```
+>
+> Seguir en el árbol de la consola, la ruta `Computer Configuration\Policies\Windows Settings\Security Settings\Public Key Policies`, clic derecho en `Untrusted Certificates` e importar los certificados.
 
 ## Conclusiones
 
