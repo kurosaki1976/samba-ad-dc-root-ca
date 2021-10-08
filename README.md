@@ -405,22 +405,11 @@ Serial Number: 6FD5DF94E18B029D7C50BD860FAF6D89
 
 > **NOTA**: El identificador `6FD5DF94E18B029D7C50BD860FAF6D89` corresponde al número de serie del certificado revocado y se visualiza en la salida de la ejecución del comando `easyrsa revoke`, utilizado en el paso de revocación en la `CA`.
 
-> **NOTA**: Se puede crear una política de grupos para distribuir los certificados en los que yo no se confía. La `GPO` debe configurarse con los siguientes parámetros:
->
->```cmd
->Computer Configuration
->  Policies
->    Windows Settings
->      Security Settings
->        Public Key Policies/Untrusted Certificates
->          Certificates
->```
->
-> Seguir en el árbol de la consola, la ruta `Computer Configuration\Policies\Windows Settings\Security Settings\Public Key Policies`, clic derecho en `Untrusted Certificates` e importar los certificados.
-
 ## Conclusiones
 
 En este tutorial, se agregó el rol de autoridad de certificación (CA) privada utilizando el paquete `Easy-RSA` a un servidor `Samba AD DC` corriendo sistema operativo `Debian GNU\Linux v10/11`. Se explicó cómo funciona el modelo de confianza entre las partes que dependen de la `CA`. Así como, se crearon y firmaron las solicitudes de firma de certificado (CSR) para algunos de los servicios integrados en la [Guía para la implementación de servicios integrados a Samba como Active Directory Domain Controller (Samba AD DC) en Debian 10/11](https://github.com/kurosaki1976/samba-ad-dc-integrated-services) y, finalmente se procedió a revocar un certificado, mostrándose cómo generar y distribuir una lista de revocación de certificados (CRL) para cualquier sistema dependiente de la `CA` garantizando que los usuarios o servidores que no deben acceder a los servicios, no puedan hacerlo.
+
+> **NOTA**: Se puede crear una política de grupos para distribuir los certificados en los que yo no se confía. La `GPO` debe configurarse siguiendo la ruta `Computer Configuration\Policies\Windows Settings\Security Settings\Public Key Policies`, clic derecho en `Untrusted Certificates` e importar los certificados.
 
 La renovación de certificados expirados no es objeto de esta guía, porque es un proceso en extremo fácil e intuitivo, basta con ejecutar `easyrsa help renew` para conocer cómo hacerlo. Sin embargo, es necesario aclarar que la renovación en `Easy RSA` por defecto está disponible para certificados firmados con un período de validez inferior a los 30 días, comportamiento que puede ser modificado en el fichero de variables.
 
